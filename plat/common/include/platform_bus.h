@@ -81,6 +81,13 @@ enum pf_device_state {
 	PF_DEVICE_STATE_RUNNING
 };
 
+struct pf_device_info {
+	__u64 size;
+	__u64 base_addr;
+	unsigned long irq;
+	unsigned long dev_id;
+};
+
 struct pf_device {
 	UK_TAILQ_ENTRY(struct pf_device) next; /**< used by pf_bus_handler */
 	struct pf_device_id  id;
@@ -109,6 +116,8 @@ UK_TAILQ_HEAD(pf_device_list, struct pf_device);
 		_pf_register_driver((b));				\
 	}								\
 	PF_REGISTER_CTOR(_PF_REGFNNAME(libname, _pf_register_driver))
+
+void pf_register_device_resources(struct pf_device_info pf_dev_info);
 
 /* Do not use this function directly: */
 void _pf_register_driver(struct pf_driver *drv);

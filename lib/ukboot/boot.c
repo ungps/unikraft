@@ -49,6 +49,12 @@
 #if CONFIG_LIBUKSCHED
 #include <uk/sched.h>
 #endif
+#if CONFIG_LIBUKSCHED
+#include <uk/sched.h>
+#endif
+#if CONFIG_LIBUKMMIO
+#include <uk/mmio.h>
+#endif
 #include <uk/arch/lcpu.h>
 #include <uk/plat/bootstrap.h>
 #include <uk/plat/memory.h>
@@ -179,6 +185,13 @@ void ukplat_entry(int argc, char *argv[])
 	struct thread_main_arg tma;
 	int kern_args = 0;
 	int rc __maybe_unused = 0;
+
+	uk_pr_info("Printing cmdline args\n");
+	for (int i = 0; i < argc; i++) {
+		uk_pr_info("argv[%d] = %s\n", i, argv[i]);
+	}
+	uk_pr_info("======\n");
+
 #if CONFIG_LIBUKALLOC
 	struct uk_alloc *a = NULL;
 #endif
@@ -189,7 +202,6 @@ void ukplat_entry(int argc, char *argv[])
 	struct uk_sched *s = NULL;
 	struct uk_thread *main_thread = NULL;
 #endif
-
 	uk_ctor_func_t *ctorfn;
 
 	uk_pr_info("Unikraft constructor table at %p - %p\n",
@@ -209,6 +221,12 @@ void ukplat_entry(int argc, char *argv[])
 		uk_pr_info("Found %d library args\n", kern_args);
 	}
 #endif /* CONFIG_LIBUKLIBPARAM */
+
+
+#if CONFIG_LIBUKMMIO
+	uk_pr_info("CONFIG MMIO\n");
+	test_mmio();
+#endif
 
 #if !CONFIG_LIBUKBOOT_NOALLOC
 	/* initialize memory allocator

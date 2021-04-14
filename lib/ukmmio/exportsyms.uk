@@ -1,0 +1,5 @@
+test_mmio
+mmio_get_base_addr
+mmio_get_size
+mmio_get_irq
+mmio_get_dev_id

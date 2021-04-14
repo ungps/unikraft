@@ -510,6 +510,12 @@ int uk_libparam_parse(const char *progname, int argc, char **argv)
 	struct uk_lib_section *section = NULL;
 	struct uk_param *param = NULL;
 
+	uk_pr_info("\n\n\n\n\n");
+	for (int i = 0; i < argc; i++) {
+		uk_pr_info("%s", argv[i]);
+	}
+	uk_pr_info("\n\n\n\n\n");
+
 	keindex = kernel_arg_range_fetch(argc, argv);
 	if (keindex < 0) {
 		uk_pr_info("No library arguments found\n");
