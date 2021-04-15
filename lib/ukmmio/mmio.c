@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <uk/libparam.h>
 
-static char *device = "placeholder";
-UK_LIB_PARAM_STR(device);
+// static char *device = "placeholder";
+// UK_LIB_PARAM_STR(device);
 
 struct pf_device_info2 {
 	__u64 size;
@@ -34,12 +34,12 @@ __u64 parse_until(char *str, char c, int base, char **pEnd) {
 	return strtol(str, pEnd, base);
 }
 
-void test_mmio() {
+void test_mmio(char *device) {
 	char *pEnd;
 	__u64 size, base_addr;
 	unsigned long irq, plat_dev_id = 0;
 	
-	uk_pr_info("mmio.c\n%s\n\n\n", device);
+	uk_pr_info("mmio.c got device %sp\n", device);
 
 	size = parse_until(device, '@', 0, &pEnd);
 	if (!size) {
@@ -64,6 +64,8 @@ void test_mmio() {
 	pf_dev_info.size = size;
 	pf_dev_info.irq = irq;
 	pf_dev_info.dev_id = plat_dev_id;
+
+	uk_pr_info("New mmio device at %#x of size %#x and irq %ul\n", base_addr, size, irq);
 }
 
 __u64 mmio_get_base_addr() {
