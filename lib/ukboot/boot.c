@@ -186,12 +186,6 @@ void ukplat_entry(int argc, char *argv[])
 	int kern_args = 0;
 	int rc __maybe_unused = 0;
 
-	uk_pr_info("Printing cmdline args\n");
-	for (int i = 0; i < argc; i++) {
-		uk_pr_info("argv[%d] = %s\n", i, argv[i]);
-	}
-	uk_pr_info("======\n");
-
 #if CONFIG_LIBUKALLOC
 	struct uk_alloc *a = NULL;
 #endif
@@ -222,10 +216,19 @@ void ukplat_entry(int argc, char *argv[])
 	}
 #endif /* CONFIG_LIBUKLIBPARAM */
 
+	uk_pr_info("Printing cmdline args\n");
+	for (int i = 0; i < argc; i++) {
+		uk_pr_info("argv[%d] = %s\n", i, argv[i]);
+	}
+	uk_pr_info("======\n");
 
 #if CONFIG_LIBUKMMIO
 	uk_pr_info("CONFIG MMIO\n");
-	test_mmio();
+	for (int i = 1; i < argc; i++) {
+		// if (!strncmp(argv[i], "virtio_mmio.device=", 19)) {
+			test_mmio(argv[i] + 19);
+		// }
+	}
 #endif
 
 #if !CONFIG_LIBUKBOOT_NOALLOC

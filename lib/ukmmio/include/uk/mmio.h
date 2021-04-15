@@ -1,4 +1,4 @@
-void test_mmio();
+void test_mmio(char *device);
 __u64 mmio_get_base_addr();
 __u64 mmio_get_size();
 unsigned long mmio_get_irq();

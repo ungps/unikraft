@@ -71,6 +71,8 @@ static inline void _mb_get_cmdline(struct multiboot_info *mi)
 
 	/* ensure null termination */
 	cmdline[(sizeof(cmdline) - 1)] = '\0';
+	uk_pr_info("Cmdline: %s\n", cmdline);
+	uk_pr_info("Mi->flags: %u\n", mi->flags);
 }
 
 static inline void _mb_init_mem(struct multiboot_info *mi)
@@ -275,6 +277,7 @@ void _libkvmplat_entry(void *arg)
 	_mb_get_cmdline(mi);
 	_mb_init_mem(mi);
 	_mb_init_initrd(mi);
+
 
 	if (_libkvmplat_cfg.initrd.len)
 		uk_pr_info("        initrd: %p\n",
