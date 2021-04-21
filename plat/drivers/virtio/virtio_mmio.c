@@ -401,17 +401,40 @@ static struct virtio_config_ops virtio_mmio_config_ops = {
 	.vq_setup	= vm_setup_vq,
 };
 
+// static int virtio_mmio_handle(void *arg)
+// {
+// 	struct virtio_mmio_dev *d = (struct virtio_mmio_dev *) arg;
+// 	uint8_t isr_status;
+// 	struct virtqueue *vq;
+// 	int rc = 0;
+
+// 	UK_ASSERT(arg);
+
+// 	/* Reading the isr status is used to acknowledge the interrupt */
+// 	isr_status = virtio_cread8((void *)(unsigned long)d->pci_isr_addr, VIRTIO_MMIO_INTERRUPT_STATUS);
+// 	/* We don't support configuration interrupt on the device */
+// 	if (isr_status & 1) {
+// 		uk_pr_warn("Unsupported config change interrupt received on virtio-mmio device %p\n",
+// 			   d);
+// 	}
+
+// 	if (isr_status & 2) {
+// 		UK_TAILQ_FOREACH(vq, &d->vdev.vqs, next) {
+// 			rc |= virtqueue_ring_interrupt(vq);
+// 		}
+// 	}
+// 	return rc;
+// }
+
 static int virtio_mmio_probe(struct pf_device *pfdev)
 {
 #ifdef CONFIG_ARCH_ARM_64
 	const fdt32_t *prop;
-#endif
 	int type, hwirq, prop_len;
 	int fdt_vm = pfdev->fdt_offset;
 	__u64 reg_base;
 	__u64 reg_size;
 
-#ifdef CONFIG_ARCH_ARM_64
 	if (fdt_vm == -FDT_ERR_NOTFOUND) {
 		uk_pr_info("device not found in fdt\n");
 		goto error_exit;
@@ -441,6 +464,7 @@ static int virtio_mmio_probe(struct pf_device *pfdev)
 #endif
 	pfdev->base = mmio_get_base_addr();
 	pfdev->irq = mmio_get_irq();
+	ukplat_irq_register(pfdev->irq, vm_interrupt, pfdev);
 	uk_pr_info("virtio mmio probe base(0x%lx) irq(%ld)\n",
 				pfdev->base, pfdev->irq);
 	return 0;
@@ -475,6 +499,9 @@ static int virtio_mmio_add_dev(struct pf_device *pfdev)
 		goto free_vmdev;
 	}
 
+	uk_pr_info("reading from base %x\n", vm_dev->base);
+	int *p = vm_dev->base + VIRTIO_MMIO_MAGIC_VALUE;
+	// __asm__ __volatile__("mov %1, %0" : "=r"(magic) : "r"(*p));
 	magic = virtio_cread32(vm_dev->base, VIRTIO_MMIO_MAGIC_VALUE);
 	if (magic != ('v' | 'i' << 8 | 'r' << 16 | 't' << 24)) {
 		uk_pr_err("Wrong magic value 0x%x!\n", magic);
