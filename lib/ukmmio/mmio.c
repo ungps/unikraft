@@ -65,7 +65,7 @@ void test_mmio(char *device) {
 	pf_dev_info.irq = irq;
 	pf_dev_info.dev_id = plat_dev_id;
 
-	uk_pr_info("New mmio device at %#x of size %#x and irq %ul\n", base_addr, size, irq);
+	uk_pr_info("New mmio device at %#x of size %#x and irq %u\n", base_addr, size, irq);
 }
 
 __u64 mmio_get_base_addr() {
