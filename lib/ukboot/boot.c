@@ -225,9 +225,9 @@ void ukplat_entry(int argc, char *argv[])
 #if CONFIG_LIBUKMMIO
 	uk_pr_info("CONFIG MMIO\n");
 	for (int i = 1; i < argc; i++) {
-		// if (!strncmp(argv[i], "virtio_mmio.device=", 19)) {
+		if (!strncmp(argv[i], "virtio_mmio.device=", 19)) {
 			test_mmio(argv[i] + 19);
-		// }
+		}
 	}
 #endif
 
