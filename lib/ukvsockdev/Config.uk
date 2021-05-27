@@ -1,0 +1,7 @@
+menuconfig LIBUKVSOCKDEV
+	bool "ukvsockdev: Vsock driver interface"
+	default n
+	select LIBUKALLOC
+	select LIBNOLIBC if !HAVE_LIBC
+	select LIBUKDEBUG
+
