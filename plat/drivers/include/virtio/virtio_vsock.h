@@ -1,19 +1,15 @@
 #ifndef __PLAT_DRV_VIRTIO_VSOCK_H
 #define __PLAT_DRV_VIRTIO_VSOCK_H
+
+#define VIRTIO_VSOCK_TYPE_STREAM 1
+#define VIRTIO_VSOCK_TYPE_DGRAM 2 // not supported
+
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_config.h>
 #include <virtio/virtio_types.h>
 
 struct virtio_vsock_config {
 	__u64 guest_cid;
-} __packed;
-
-enum virtio_vsock_event_id {
-	VIRTIO_VSOCK_EVENT_TRANSPORT_RESET = 0,
-};
-
-struct virtio_vsock_event {
-	__u32 id;
 } __packed;
 
 struct virtio_vsock_hdr {
@@ -29,9 +25,6 @@ struct virtio_vsock_hdr {
 	__u32	fwd_cnt;
 } __packed;
 
-enum virtio_vsock_type {
-	VIRTIO_VSOCK_TYPE_STREAM = 1,
-};
 
 enum virtio_vsock_op {
 	VIRTIO_VSOCK_OP_INVALID = 0,
@@ -49,12 +42,6 @@ enum virtio_vsock_op {
 	VIRTIO_VSOCK_OP_CREDIT_UPDATE = 6,
 	/* Request the peer to send the credit info to us */
 	VIRTIO_VSOCK_OP_CREDIT_REQUEST = 7,
-};
-
-/* VIRTIO_VSOCK_OP_SHUTDOWN flags values */
-enum virtio_vsock_shutdown {
-	VIRTIO_VSOCK_SHUTDOWN_RCV = 1,
-	VIRTIO_VSOCK_SHUTDOWN_SEND = 2,
 };
 
 #endif /* __PLAT_DRV_VIRTIO_VSOCK_H */

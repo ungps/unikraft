@@ -31,8 +31,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /* This is derived from uknetdev because of consistency reasons */
-#ifndef __UK_BLKDEV__
-#define __UK_BLKDEV__
+#ifndef __UK_VSOCKDEV__
+#define __UK_VSOCKDEV__
 
 /**
  * Unikraft Block API
@@ -68,7 +68,7 @@
 #include <uk/list.h>
 #include <uk/errptr.h>
 
-#include "blkdev_core.h"
+#include "vsockdev_core.h"
 
 #ifdef __cplusplus
 extern "C" {
