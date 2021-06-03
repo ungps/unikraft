@@ -24,7 +24,10 @@ int uk_vsockdev_drv_register(struct uk_vsockdev *dev)
 	UK_ASSERT(dev);
 
 	// Drv already registered
-	UK_ASSERT(uk_vskdev != NULL);
+	if (uk_vskdev) {
+		uk_pr_info("There is already a vsock device registered");
+		return 0;
+	}
 	/* Data must be unallocated. */
 	// UK_ASSERT(PTRISERR(dev->_data));
 	/* Assert mandatory configuration. */
@@ -53,7 +56,7 @@ int uk_vsockdev_drv_register(struct uk_vsockdev *dev)
 	return 1;
 }
 
-struct uk_vsockkdev *uk_vsockdev_get(unsigned int id)
+struct uk_vsockdev *uk_vsockdev_get()
 {
 	return uk_vskdev;
 }

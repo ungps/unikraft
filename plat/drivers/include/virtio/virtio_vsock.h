@@ -12,20 +12,6 @@ struct virtio_vsock_config {
 	__u64 guest_cid;
 } __packed;
 
-struct virtio_vsock_hdr {
-	__u64	src_cid;
-	__u64	dst_cid;
-	__u32	src_port;
-	__u32	dst_port;
-	__u32	len;
-	__u16	type;
-	__u16	op;
-	__u32	flags;
-	__u32	buf_alloc;
-	__u32	fwd_cnt;
-} __packed;
-
-
 enum virtio_vsock_op {
 	VIRTIO_VSOCK_OP_INVALID = 0,
 

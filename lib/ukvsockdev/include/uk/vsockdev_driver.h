@@ -25,8 +25,7 @@ extern "C" {
  *	- (-ENOMEM): Allocation of private
  *	- (>=0): Vsock device ID on success
  */
-int uk_vsockdev_drv_register(struct uk_blkdev *dev, struct uk_alloc *a,
-		const char *drv_name);
+int uk_vsockdev_drv_register(struct uk_vsockdev *dev);
 
 /**
  * Frees the data allocated for the Unikraft Block Device.
@@ -35,7 +34,7 @@ int uk_vsockdev_drv_register(struct uk_blkdev *dev, struct uk_alloc *a,
  * @param dev
  *	Unikraft block device
  */
-void uk_blkdev_drv_unregister(struct uk_blkdev *dev);
+void uk_blkdev_drv_unregister();
 
 #ifdef __cplusplus
 }

@@ -390,7 +390,7 @@ static struct uk_vsockdev_rx_queue *virtio_vsockdev_rx_queue_setup(
 	UK_ASSERT(conf);
 	UK_ASSERT(conf->alloc_rxpkts);
 
-	vskdev = to_virtionetdev(dev);
+	vskdev = to_virtiovsockdev(dev);
 	if (queue_id >= 3) {
 		uk_pr_err("Invalid virtqueue identifier: %"__PRIu16"\n",
 			  queue_id);
@@ -660,16 +660,18 @@ static inline void virtio_vsockdev_feature_set(struct virtio_vsock_device *vskde
 }
 
 static const struct uk_vsockdev_ops virtio_vsockdev_ops = {
-// 		.get_info = virtio_blkdev_get_info,
-		// .dev_configure = virtio_vsockdev_configure,
-// 		.queue_get_info = virtio_blkdev_queue_info_get,
+//  	.dev_configure = virtio_vsockdev_configure,
 //  	.rxq_configure = virtio_vsockdev_rx_queue_setup,
 //  	.txq_configure = virtio_vsockdev_tx_queue_setup,
 //  	.evq_configure = virtio_vsockdev_ev_queue_setup,
-// 		.queue_intr_enable = virtio_blkdev_queue_intr_enable,
+// 		.rxq_intr_enable = virtio_vsockdev_rxq_intr_enable,
+// 		.rxq_intr_disable = virtio_vsockdev_rxq_intr_disable,
+// 		.txq_intr_enable = virtio_vsockdev_txq_intr_enable,
+// 		.txq_intr_disable = virtio_vsockdev_txq_intr_disable,
+// 		.evq_intr_enable = virtio_vsockdev_evq_intr_enable,
+// 		.evq_intr_disable = virtio_vsockdev_evq_intr_disable,
 // 		.dev_start = virtio_blkdev_start,
 // 		.dev_stop = virtio_blkdev_stop,
-// 		.queue_intr_disable = virtio_blkdev_queue_intr_disable,
 // 		.queue_unconfigure = virtio_blkdev_queue_release,
 // 		.dev_unconfigure = virtio_blkdev_unconfigure,
 };
@@ -688,7 +690,7 @@ static int virtio_vsock_add_dev(struct virtio_dev *vdev)
 	vskdev->vdev = vdev;
 	vskdev->vsockdev.dev_ops = &virtio_vsockdev_ops;
 
-	rc = uk_blkdev_drv_register(&vskdev->vsockdev, a, drv_name);
+	rc = uk_vsockdev_drv_register(&vskdev->vsockdev);
 	if (rc < 0) {
 		uk_pr_err("Failed to register virtio_vsock device: %d\n", rc);
 		goto err_out;
@@ -702,7 +704,7 @@ static int virtio_vsock_add_dev(struct virtio_dev *vdev)
 		goto err_negotiate_feature;
 	}
 
-	uk_pr_info("Virtio-vsock device registered with libukvsockdev\n");
+	uk_pr_info("Virtio-vsock device with cid %d registered with libukvsockdev\n", vskdev->cid);
 
 out:
 	return rc;
