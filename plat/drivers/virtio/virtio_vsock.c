@@ -100,8 +100,6 @@ struct uk_vsockdev_rx_queue {
 	uint16_t nb_desc;
 	/* The flag to interrupt on the transmit queue */
 	uint8_t intr_enabled;
-	/* User-provided receive buffer allocation function */
-	void *alloc_rxpkts_argp;
 	/* Reference to the uk_vsockdev */
 	struct uk_vsockdev *vskdev;
 	/* The scatter list and its associated fragements */
@@ -133,47 +131,143 @@ struct uk_vsockdev_ev_queue {
 	struct uk_sglist_seg *sgsegs;
 };
 
-// static int virtio_blkdev_queue_enqueue(struct uk_blkdev_queue *queue,
-// 		struct uk_blkreq *req)
-// {
-// 	struct virtio_blkdev_request *virtio_blk_req;
-// 	__u16 write_segs = 0;
-// 	__u16 read_segs = 0;
-// 	int rc = 0;
+static int virtio_vsockdev_rxq_enqueue(struct uk_vsockdev_rx_queue *rxq,
+		struct virtio_vsock_packet *pkt)
+{
+	__u8 *start;
+	size_t len = 0;
+	int rc = 0;
+	struct uk_sglist *sg;
 
-// 	UK_ASSERT(queue);
-// 	UK_ASSERT(req);
+	UK_ASSERT(rxq);
+	UK_ASSERT(pkt);
 
-// 	if (virtqueue_is_full(queue->vq)) {
-// 		uk_pr_debug("The virtqueue is full\n");
-// 		return -ENOSPC;
-// 	}
+	if (virtqueue_is_full(rxq->vq)) {
+		uk_pr_debug("The virtqueue is full\n");
+		return -ENOSPC;
+	}
 
-// 	virtio_blk_req = uk_malloc(a, sizeof(*virtio_blk_req));
-// 	if (!virtio_blk_req)
-// 		return -ENOMEM;
+	start = pkt->data;
+	len = pkt->hdr.len;
 
-// 	virtio_blk_req->req = req;
-// 	virtio_blk_req->virtio_blk_outhdr.sector = req->start_sector;
-// 	if (req->operation == UK_BLKREQ_WRITE ||
-// 			req->operation == UK_BLKREQ_READ)
-// 		rc = virtio_blkdev_request_write(queue, virtio_blk_req,
-// 				&read_segs, &write_segs);
-// 	else if (req->operation == UK_BLKREQ_FFLUSH)
-// 		rc = virtio_blkdev_request_flush(queue, virtio_blk_req,
-// 				&read_segs, &write_segs);
-// 	else
-// 		return -EINVAL;
+	sg = &rxq->sg;
+	uk_sglist_reset(sg);
 
-// 	if (rc)
-// 		goto out;
+	/* Appending the header buffer to the sglist */
+	uk_sglist_append(sg, &pkt->hdr, sizeof(struct virtio_vsock_hdr));
 
-// 	rc = virtqueue_buffer_enqueue(queue->vq, virtio_blk_req, &queue->sg,
-// 				      read_segs, write_segs);
+	/* Appending the data buffer to the sglist */
+	uk_sglist_append(sg, start, len);
 
-// out:
-// 	return rc;
-// }
+	rc = virtqueue_buffer_enqueue(rxq->vq, pkt, &rxq->sg,
+				       0, sg->sg_nseg);
+
+	return rc;
+}
+
+static int virtio_vsockdev_rxq_fillup(struct uk_vsockdev_rx_queue *rxq,
+				   __u16 nb_desc,
+				   int notify)
+{
+	struct virtio_vsock_packet *pkt;
+	int rc = 0;
+	__u16 i;
+
+	for (i = 0; i < nb_desc; i++) {
+		pkt = uk_calloc(a, 1, sizeof(*pkt));
+		if (unlikely(!pkt)) {
+			uk_pr_info("Couldn't alloc rx packet\n");
+			break;
+		}
+
+		pkt->data = uk_calloc(a, VIRTIO_VSOCK_RX_DATA_SIZE, sizeof(*pkt->data));
+		if (unlikely(!pkt->data)) {
+			uk_pr_info("Couldn't alloc rx data\n");
+			break;
+		}
+
+		rc = virtio_vsockdev_rxq_enqueue(rxq, pkt);
+		if (unlikely(rc < 0)) {
+			uk_pr_err("Failed to add a buffer to receive virtqueue %p: %d\n",
+				rxq, rc);
+			uk_free(a, pkt);
+			break;
+		}
+	}
+
+out:
+	uk_pr_debug("Programmed %d receive vsock to receive virtqueue %p\n", i, rxq);
+
+	/**
+	 * Notify the host, when we submit new descriptor(s).
+	 */
+	if (notify && i)
+		virtqueue_host_notify(rxq->vq);
+
+	return 0;
+}
+
+static int virtio_vsockdev_evq_enqueue(struct uk_vsockdev_ev_queue *evq,
+		struct virtio_vsock_event *ev)
+{
+	int rc = 0;
+	struct uk_sglist *sg;
+
+	UK_ASSERT(evq);
+	UK_ASSERT(ev);
+
+	if (virtqueue_is_full(evq->vq)) {
+		uk_pr_debug("The virtqueue is full\n");
+		return -ENOSPC;
+	}
+
+	sg = &evq->sg;
+	uk_sglist_reset(sg);
+
+	/* Appending the event to the sglist */
+	uk_sglist_append(sg, &ev, sizeof(struct virtio_vsock_event));
+
+	rc = virtqueue_buffer_enqueue(evq->vq, ev, &evq->sg,
+				       0, sg->sg_nseg);
+
+	return rc;
+}
+
+static int virtio_vsockdev_evq_fillup(struct uk_vsockdev_ev_queue *evq,
+				   __u16 nb_desc,
+				   int notify)
+{
+	struct virtio_vsock_event *ev;
+	int rc = 0;
+	__u16 i;
+
+	for (i = 0; i < nb_desc; i++) {
+		ev = uk_calloc(a, 1, sizeof(*ev));
+		if (unlikely(!ev)) {
+			uk_pr_info("Couldn't alloc event buffer\n");
+			break;
+		}
+
+		rc = virtio_vsockdev_evq_enqueue(evq, ev);
+		if (unlikely(rc < 0)) {
+			uk_pr_err("Failed to add a buffer to receive virtqueue %p: %d\n",
+				evq, rc);
+			uk_free(a, ev);
+			break;
+		}
+	}
+
+out:
+	uk_pr_debug("Programmed %d receive vsock to receive virtqueue %p\n", i, evq);
+
+	/**
+	 * Notify the host, when we submit new descriptor(s).
+	 */
+	if (notify && i)
+		virtqueue_host_notify(evq->vq);
+
+	return 0;
+}
 
 
 // static int virtio_blkdev_queue_dequeue(struct uk_blkdev_queue *queue,
@@ -339,15 +433,15 @@ static int virtio_vsockdev_vqueue_setup(struct virtio_vsock_device *vskdev,
 			  max_desc, nr_desc);
 		return -ENOBUFS;
 	}
-
 	nr_desc = (nr_desc != 0) ? nr_desc : max_desc;
-	uk_pr_debug("Configuring the %d descriptors\n", nr_desc);
 
+	uk_pr_debug("Configuring the %d descriptors\n", nr_desc);
 	/* Check if the descriptor is a power of 2 */
 	if (unlikely(nr_desc & (nr_desc - 1))) {
 		uk_pr_err("Expect descriptor count as a power 2\n");
 		return -EINVAL;
 	}
+
 	vq = virtio_vqueue_setup(vskdev->vdev, hwvq_id, nr_desc, callback, a);
 	if (unlikely(PTRISERR(vq))) {
 		uk_pr_err("Failed to set up virtqueue %"__PRIu16"\n",
@@ -388,7 +482,6 @@ static struct uk_vsockdev_rx_queue *virtio_vsockdev_rx_queue_setup(
 
 	UK_ASSERT(dev);
 	UK_ASSERT(conf);
-	UK_ASSERT(conf->alloc_rxpkts);
 
 	vskdev = to_virtiovsockdev(dev);
 	if (queue_id >= 3) {
@@ -398,6 +491,7 @@ static struct uk_vsockdev_rx_queue *virtio_vsockdev_rx_queue_setup(
 		goto err_exit;
 	}
 	/* Setup the virtqueue with the descriptor */
+	uk_pr_info("queue_id: %d, nb_desc: %d, queue_type %d\n", queue_id, nb_desc, VSOCK_RX);
 	rc = virtio_vsockdev_vqueue_setup(vskdev, queue_id, nb_desc, VSOCK_RX,
 					conf->a);
 	if (rc < 0) {
@@ -406,18 +500,55 @@ static struct uk_vsockdev_rx_queue *virtio_vsockdev_rx_queue_setup(
 		goto err_exit;
 	}
 	rxq  = vskdev->rxq;
-	// rxq->alloc_rxpkts = conf->alloc_rxpkts;
-	rxq->alloc_rxpkts_argp = conf->alloc_rxpkts_argp;
 
 	/* Allocate receive buffers for this queue */
-	// TODO
-	// virtio_dev_rx_fillup(rxq, rxq->nb_desc, 0);
+	virtio_vsockdev_rxq_fillup(rxq, rxq->nb_desc, 0);
 
 exit:
 	return rxq;
 
 err_exit:
 	rxq = ERR2PTR(rc);
+	goto exit;
+}
+
+static struct uk_vsockdev_rx_queue *virtio_vsockdev_ev_queue_setup(
+				struct uk_vsockdev *dev, uint16_t queue_id,
+				uint16_t nb_desc,
+				struct uk_vsockdev_evqueue_conf *conf)
+{
+	struct virtio_vsock_device *vskdev;
+	struct uk_vsockdev_ev_queue *evq = NULL;
+	int rc;
+
+	UK_ASSERT(dev);
+	UK_ASSERT(conf);
+
+	vskdev = to_virtiovsockdev(dev);
+	if (queue_id >= 3) {
+		uk_pr_err("Invalid virtqueue identifier: %"__PRIu16"\n",
+			  queue_id);
+		rc = -EINVAL;
+		goto err_exit;
+	}
+	/* Setup the virtqueue with the descriptor */
+	rc = virtio_vsockdev_vqueue_setup(vskdev, queue_id, nb_desc, VSOCK_EV,
+					conf->a);
+	if (rc < 0) {
+		uk_pr_err("Failed to set up virtqueue %"__PRIu16": %d\n",
+			  queue_id, rc);
+		goto err_exit;
+	}
+	evq = vskdev->evq;
+
+	/* Allocate receive buffers for this queue */
+	virtio_vsockdev_evq_fillup(evq, evq->nb_desc, 0);
+
+exit:
+	return evq;
+
+err_exit:
+	evq = ERR2PTR(rc);
 	goto exit;
 }
 
@@ -527,27 +658,6 @@ err_free_txrxev:
 	if (!vskdev->txq)
 		uk_free(a, vskdev->evq);
 	goto exit;
-}
-
-static int virtio_vsockdev_configure(struct uk_vsockdev *dev,
-		const struct uk_vsockdev_conf *conf)
-{
-	int rc = 0;
-	struct virtio_vsock_device *vskdev = NULL;
-
-	UK_ASSERT(dev != NULL);
-	UK_ASSERT(conf != NULL);
-
-	vskdev = to_virtiovsockdev(dev);
-	rc = virtio_vsockdev_queues_alloc(vskdev);
-	if (rc) {
-		uk_pr_err("Failed to allocate the queues %d\n", rc);
-		goto exit;
-	}
-
-	uk_pr_info(DRIVER_NAME": %"__PRIu16" configured\n", vskdev->uid);
-exit:
-	return rc;
 }
 
 static int virtio_vsockdev_start(struct uk_vsockdev *dev)
@@ -661,15 +771,14 @@ static inline void virtio_vsockdev_feature_set(struct virtio_vsock_device *vskde
 
 static const struct uk_vsockdev_ops virtio_vsockdev_ops = {
 //  	.dev_configure = virtio_vsockdev_configure,
-//  	.rxq_configure = virtio_vsockdev_rx_queue_setup,
 //  	.txq_configure = virtio_vsockdev_tx_queue_setup,
-//  	.evq_configure = virtio_vsockdev_ev_queue_setup,
 // 		.rxq_intr_enable = virtio_vsockdev_rxq_intr_enable,
 // 		.rxq_intr_disable = virtio_vsockdev_rxq_intr_disable,
 // 		.txq_intr_enable = virtio_vsockdev_txq_intr_enable,
 // 		.txq_intr_disable = virtio_vsockdev_txq_intr_disable,
 // 		.evq_intr_enable = virtio_vsockdev_evq_intr_enable,
 // 		.evq_intr_disable = virtio_vsockdev_evq_intr_disable,
+
 // 		.dev_start = virtio_blkdev_start,
 // 		.dev_stop = virtio_blkdev_stop,
 // 		.queue_unconfigure = virtio_blkdev_queue_release,
@@ -679,6 +788,8 @@ static const struct uk_vsockdev_ops virtio_vsockdev_ops = {
 static int virtio_vsock_add_dev(struct virtio_dev *vdev)
 {
 	struct virtio_vsock_device *vskdev;
+	struct uk_vsockdev_rxqueue_conf rx_conf;
+	struct uk_vsockdev_evqueue_conf ev_conf;
 	int rc = 0;
 
 	UK_ASSERT(vdev != NULL);
@@ -705,6 +816,12 @@ static int virtio_vsock_add_dev(struct virtio_dev *vdev)
 	}
 
 	uk_pr_info("Virtio-vsock device with cid %d registered with libukvsockdev\n", vskdev->cid);
+
+	rc = virtio_vsockdev_queues_alloc(vskdev);
+	rx_conf.a = a;
+	rc = virtio_vsockdev_rx_queue_setup(vskdev, VSOCK_RX, 0, &rx_conf);
+	ev_conf.a = a;
+	rc = virtio_vsockdev_ev_queue_setup(vskdev, VSOCK_EV, 0, &ev_conf);
 
 out:
 	return rc;

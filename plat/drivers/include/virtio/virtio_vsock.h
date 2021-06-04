@@ -1,8 +1,10 @@
 #ifndef __PLAT_DRV_VIRTIO_VSOCK_H
 #define __PLAT_DRV_VIRTIO_VSOCK_H
 
-#define VIRTIO_VSOCK_TYPE_STREAM 1
-#define VIRTIO_VSOCK_TYPE_DGRAM 2 // not supported
+#define VIRTIO_VSOCK_TYPE_STREAM	1
+#define VIRTIO_VSOCK_TYPE_DGRAM		2 // not supported
+
+#define VIRTIO_VSOCK_RX_DATA_SIZE	1024 * 4
 
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_config.h>

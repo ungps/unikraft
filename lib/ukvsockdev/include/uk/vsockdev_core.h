@@ -41,9 +41,17 @@ struct virtio_vsock_hdr {
 	__u32	fwd_cnt;
 } __packed;
 
-struct virtio_vsock_packet { 
-    struct virtio_vsock_hdr hdr; 
-    __u8 data[]; 
+struct virtio_vsock_packet {
+    struct virtio_vsock_hdr hdr;
+    __u8 *data;
+};
+
+enum virtio_vsock_event_id {
+	VIRTIO_VSOCK_EVENT_TRANSPORT_RESET = 0,
+};
+
+struct virtio_vsock_event {
+	__u32 id;
 };
 
 /**
