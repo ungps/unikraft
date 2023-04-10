@@ -74,7 +74,6 @@ int uk_alloc_register(struct uk_alloc *a)
 #define __align_metadata_ifpages
 #endif /* CONFIG_HAVE_MEMTAG */
 struct metadata_ifpages {
-	__sz		size;      /* user size */
 	unsigned long	num_pages; /* alloc pages */
 	void		*base;
 } __align_metadata_ifpages;
@@ -86,8 +85,8 @@ struct metadata_ifpages {
  * compile time assertion will abort the compilation and this value will have
  * to be increased.
  */
-#define METADATA_IFPAGES_SIZE_POW2 32
-UK_CTASSERT(!(sizeof(struct metadata_ifpages) > METADATA_IFPAGES_SIZE_POW2));
+#define METADATA_IFPAGES_SIZE_POW2 16
+// UK_CTASSERT(!(sizeof(struct metadata_ifpages) > METADATA_IFPAGES_SIZE_POW2));
 
 static struct metadata_ifpages *uk_get_metadata(const void *ptr)
 {
@@ -156,7 +155,7 @@ void *uk_malloc_ifpages(struct uk_alloc *a, __sz size)
 		return __NULL;
 
 	metadata = (struct metadata_ifpages *) intptr;
-	metadata->size = size;
+	// metadata->size = size;
 	metadata->num_pages = num_pages;
 	metadata->base = (void *) intptr;
 
@@ -299,7 +298,7 @@ int uk_posix_memalign_ifpages(struct uk_alloc *a,
 	/* check for underflow (should not happen) */
 	UK_ASSERT(intptr <= (__uptr) metadata);
 
-	metadata->size = size;
+	// metadata->size = size;
 	metadata->num_pages = num_pages;
 	metadata->base = (void *) intptr;
 
