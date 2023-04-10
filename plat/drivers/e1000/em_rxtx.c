@@ -1045,6 +1045,7 @@ eth_em_rx_queue_setup(struct uk_netdev *dev,
 
 	/* Free memory prior to re-allocation if needed. */
 	if (dev->_rx_queue[queue_idx] != NULL) {
+		uk_pr_info("debug setting queue to null\n");
 		// em_rx_queue_release(hw->a, dev->_rx_queue[queue_idx]);
 		em_rx_queue_release(dev->_rx_queue[queue_idx]);
 		debug_uk_pr_info("Setting dev->_rx_queue[queue_idx] to null\n");
@@ -1088,6 +1089,7 @@ eth_em_rx_queue_setup(struct uk_netdev *dev,
 	rxq->rx_ring_phys_addr = mem;
 	rxq->rx_ring = (struct e1000_rx_desc *) mem;
 
+	uk_pr_info("setam rxq\n");
 	dev->_rx_queue[queue_idx] = rxq;
 	hw->nb_rx_queues++;
 	em_reset_rx_queue(rxq);

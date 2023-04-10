@@ -136,7 +136,7 @@ int uk_netdev_drv_register(struct uk_netdev *dev, struct uk_alloc *a,
 			   const char *drv_name)
 {
 	UK_ASSERT(dev);
-	UK_ASSERT(!dev->_data);
+	// UK_ASSERT(!dev->_data);
 
 	/* Assert mandatory configuration */
 	UK_ASSERT(dev->ops);
@@ -463,24 +463,39 @@ int uk_netdev_rxq_configure(struct uk_netdev *dev, uint16_t queue_id,
 		return -EINVAL;
 
 	/* Make sure that we are not initializing this queue a second time */
-	if (!PTRISERR(dev->_rx_queue[queue_id]))
+	// AICI AVEM EROARE
+	// CRED ??? CA ANTERIOR A FOST APELAT NETDEV_CONFIGURE(), IAR DEV->_RX_QUEUE[I] AR TREBUI
+	// SA FIE UN POINTER VALID (COADA SA FIE ALOCATA, DAR NU CONFIGURATA INCA). CRED...
+	if (!PTRISERR(dev->_rx_queue[queue_id])) {
+		uk_pr_info("dev->_rx_queue[queue_id] = dev->_rx_queue[%d] = %p\n", queue_id, dev->_rx_queue[queue_id]);
 		return -EBUSY;
-
+	}
+	uk_pr_info("_________________________my_debug_______________________1\n");
 	err = _create_event_handler(rx_conf->callback, rx_conf->callback_cookie,
 #ifdef CONFIG_LIBUKNETDEV_DISPATCHERTHREADS
 				    dev, queue_id, "rxq", rx_conf->s,
 #endif
 				    &dev->_data->rxq_handler[queue_id]);
-	if (err)
+	uk_pr_info("_________________________my_debug_______________________2\n");
+	if (err) {
+		uk_pr_info("_________________________my_debug_______________________3\n");
 		goto err_out;
+	}
 
+	// AICI PROBLEMA (ACEASI PRB MENTIONATA IN E1000_HW.H:654). RXQ_CONFIGURE AR TREBUI
+	// SA RETURNEZE POINTER DIN STRUCTURA INTERNA A LUI E1000_HW (CARE NU EXISTA INCA, VA TREBUI ADAUGAT UN ARRAY
+	// VEZI NOTA DE DINCOLO, IAR VECTORII DE RXQS SI TXQS DIN UKNETDEV SA NU MAI FIE FOLOSITI)
+	uk_pr_info("AICI AVEM PRB\n");
 	dev->_rx_queue[queue_id] = dev->ops->rxq_configure(dev, queue_id,
 							   nb_desc, rx_conf);
+	uk_pr_info("_________________________my_debug_______________________5\n");
 	if (PTRISERR(dev->_rx_queue[queue_id])) {
+	uk_pr_info("_________________________my_debug_______________________6\n");
 		err = PTR2ERR(dev->_rx_queue[queue_id]);
 		goto err_destroy_handler;
 	}
 
+	uk_pr_info("_________________________my_debug_______________________7\n");
 	uk_pr_info("netdev%"PRIu16": Configured receive queue %"PRIu16"\n",
 		   dev->_data->id, queue_id);
 	return 0;

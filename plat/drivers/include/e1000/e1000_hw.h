@@ -651,6 +651,11 @@ struct e1000_hw {
 
 	__u16 nb_rx_queues;
 	__u16 nb_tx_queues;
+	// TREBUIE DEFINITI RXQS SI TXQS SI FOLOSITI IN LOCUL CELOR DIN UK_NETDEV
+	// 	__u16    rx_vqueue_cnt;
+	// struct   uk_netdev_rx_queue *rxqs;
+	// __u16    tx_vqueue_cnt;
+	// struct   uk_netdev_tx_queue *txqs;
 
 	__u16 device_id;
 	__u16 subsystem_vendor_id;

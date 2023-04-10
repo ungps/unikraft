@@ -1054,6 +1054,7 @@ static int virtio_netdev_configure(struct uk_netdev *n,
 	UK_ASSERT(conf);
 	vndev = to_virtionetdev(n);
 
+	// trebuie duplicat asta!
 	rc = virtio_netdev_rxtx_alloc(vndev, conf);
 	if (rc < 0) {
 		uk_pr_err("%p: Failed to initialize rx and tx rings: %d\n",
