@@ -56,9 +56,9 @@
  *  │   tss  segment   ├──┘  │        .         │    └─┬──────────────────┘ │
  *  └──────────────────┘     └──────────────────┘      └────────────────────┘
  */
-__align(STACK_SIZE) /* IST1 */
+__section(".intrstack") __align(STACK_SIZE) /* IST1 */
 char cpu_intr_stack[CONFIG_UKPLAT_LCPU_MAXCOUNT][STACK_SIZE];
-__align(STACK_SIZE) /* IST2 */
+__section(".intrstack") __align(STACK_SIZE) /* IST2 */
 char cpu_trap_stack[CONFIG_UKPLAT_LCPU_MAXCOUNT][STACK_SIZE];
 
 static __align(8)
